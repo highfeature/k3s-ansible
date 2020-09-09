@@ -30,12 +30,12 @@
     regexp: '^((?!.*\bcgroup_enable=cpuset cgroup_memory=1 cgroup_enable=memory\b).*)$'
     line: '\1 cgroup_enable=cpuset cgroup_memory=1 cgroup_enable=memory'
     backrefs: true
-  notify: reboot
+    notify: reboot
   when:
     - ubuntu_arm64
-    - proc_cmdline.find('group_enable=cpuset') != -1
-    - proc_cmdline.find('cgroup_memory=1') != -1
-    - proc_cmdline.find('cgroup_enable=memory') != -1
+    - proc_cmdline['stdout'].find('group_enable=cpuset') != -1
+    - proc_cmdline['stdout'].find('cgroup_memory=1') != -1
+    - proc_cmdline['stdout'].find('cgroup_enable=memory') != -1
 
 - name: Flush iptables before changing to iptables-legacy
   iptables:
