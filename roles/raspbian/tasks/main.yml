@@ -10,14 +10,10 @@
     ubuntu_arm64: '{% if
       ( ansible_facts.architecture is search("aarch64") and
         ansible_facts.lsb.description is match("Ubuntu 20.04.1 LTS") ) %}True{% else %}False{% endif %}'
-- debug:
-    msg: "{{ raspbian, ubuntu_arm64 }}"
 
 - name: Get the remote /proc/cmdline content
   command: cat /proc/cmdline
   register: proc_cmdline
-- debug:
-    msg: "{{ proc_cmdline }}"
 
 - name: Activating cgroup support for raspbian
   lineinfile:
