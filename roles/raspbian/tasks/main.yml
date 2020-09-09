@@ -6,22 +6,45 @@
         ansible_facts.lsb.description is match("[Rr]aspbian.*[Bb]uster") ) or
       ( ansible_facts.architecture is search("aarch64") and
         ansible_facts.lsb.description is match("Debian.*buster") or
-        ansible_facts.lsb.description is match("[Rr]aspbian.*[Bb]uster") ) %}true{% else %}false{% endif %}'
+        ansible_facts.lsb.description is match("[Rr]aspbian.*[Bb]uster") ) %}True{% else %}False{% endif %}'
+    ubuntu_arm64: '{% if
+      ( ansible_facts.architecture is search("aarch64") and
+        ansible_facts.lsb.description is match("Ubuntu 20.04.1 LTS") ) %}True{% else %}False{% endif %}'
+- debug:
+    msg: "{{ raspbian, ubuntu_arm64 }}"
 
-- name: Activating cgroup support
+- name: Get the remote /proc/cmdline content
+  command: cat /proc/cmdline
+  register: proc_cmdline
+- debug:
+    msg: "{{ proc_cmdline }}"
+
+- name: Activating cgroup support for raspbian
   lineinfile:
     path: /boot/cmdline.txt
     regexp: '^((?!.*\bcgroup_enable=cpuset cgroup_memory=1 cgroup_enable=memory\b).*)$'
     line: '\1 cgroup_enable=cpuset cgroup_memory=1 cgroup_enable=memory'
     backrefs: true
   notify: reboot
+  when: raspbian
+
+- name: Activating cgroup support for ubuntu_arm64
+  lineinfile:
+    path: /boot/firmware/cmdline.txt
+    regexp: '^((?!.*\bcgroup_enable=cpuset cgroup_memory=1 cgroup_enable=memory\b).*)$'
+    line: '\1 cgroup_enable=cpuset cgroup_memory=1 cgroup_enable=memory'
+    backrefs: true
+  notify: reboot
   when:
-    - raspbian is true
+    - ubuntu_arm64
+    - proc_cmdline.find('group_enable=cpuset') != -1
+    - proc_cmdline.find('cgroup_memory=1') != -1
+    - proc_cmdline.find('cgroup_enable=memory') != -1
 
 - name: Flush iptables before changing to iptables-legacy
   iptables:
     flush: true
-  when: raspbian
+  when: raspbian or ubuntu_arm64
   changed_when: false   # iptables flush always returns changed
 
 - name: Changing to iptables-legacy
@@ -29,11 +52,11 @@
     path: /usr/sbin/iptables-legacy
     name: iptables
   register: ip4_legacy
-  when: raspbian
+  when: raspbian or ubuntu_arm64
 
 - name: Changing to ip6tables-legacy
   alternatives:
     path: /usr/sbin/ip6tables-legacy
     name: ip6tables
   register: ip6_legacy
-  when: raspbian
+  when: raspbian or ubuntu_arm64
